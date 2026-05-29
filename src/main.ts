@@ -1,4 +1,5 @@
 import "./styles.css";
+import { BabylonEngine } from "./engine/BabylonEngine";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -44,7 +45,11 @@ app.innerHTML = `
     <section class="workspace" aria-label="Viewer workspace">
       <section class="viewport-panel" aria-label="3D viewport">
         <div class="viewport-surface">
-          <div class="grid-preview" aria-hidden="true"></div>
+          <canvas
+            class="viewer-canvas"
+            data-viewer-canvas
+            aria-label="3D scene viewport"
+          ></canvas>
           <div class="viewport-empty-state">
             <p class="empty-kicker">Ready for model inspection</p>
             <h2>Upload a GLB or GLTF file</h2>
@@ -115,3 +120,17 @@ app.innerHTML = `
     </section>
   </main>
 `;
+
+const canvas = app.querySelector<HTMLCanvasElement>("[data-viewer-canvas]");
+
+if (!canvas) {
+  throw new Error("Viewer canvas element was not found.");
+}
+
+const viewerEngine = new BabylonEngine(canvas);
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    viewerEngine.dispose();
+  });
+}

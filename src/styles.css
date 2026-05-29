@@ -178,16 +178,14 @@ input:disabled {
     #16191d;
 }
 
-.grid-preview {
+.viewer-canvas {
   position: absolute;
   inset: 0;
-  opacity: 0.42;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
-  background-size: 42px 42px;
-  transform: perspective(900px) rotateX(58deg) translateY(20%);
-  transform-origin: center bottom;
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+  touch-action: none;
 }
 
 .viewport-empty-state {
@@ -198,6 +196,7 @@ input:disabled {
   justify-items: center;
   gap: 14px;
   padding: 28px;
+  pointer-events: none;
   text-align: center;
 }
 
