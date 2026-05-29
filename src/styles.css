@@ -36,6 +36,16 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
+.visually-hidden {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .viewer-app {
   min-height: 100vh;
   display: grid;
@@ -178,6 +188,23 @@ input:disabled {
     #16191d;
 }
 
+.viewport-surface::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  pointer-events: none;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.viewport-surface.is-drag-over::after {
+  border-color: rgba(137, 193, 145, 0.78);
+  background: rgba(137, 193, 145, 0.08);
+}
+
 .viewer-canvas {
   position: absolute;
   inset: 0;
@@ -200,6 +227,10 @@ input:disabled {
   text-align: center;
 }
 
+.viewport-empty-state .primary-button {
+  pointer-events: auto;
+}
+
 .empty-kicker {
   color: #89c191;
   font-size: 0.8rem;
@@ -220,6 +251,47 @@ input:disabled {
   max-width: 460px;
   color: #c3cbd3;
   line-height: 1.6;
+}
+
+.drop-copy {
+  font-size: 0.88rem;
+}
+
+.status-message {
+  max-width: 560px;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #d8e3ec;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.status-message.is-ready {
+  color: #dff5e3;
+  background: rgba(76, 143, 92, 0.28);
+}
+
+.status-message.is-error {
+  color: #ffdddd;
+  background: rgba(160, 59, 59, 0.3);
+}
+
+.status-message.is-warning {
+  color: #fff0cb;
+  background: rgba(171, 117, 26, 0.32);
+}
+
+.viewport-empty-state.has-file .empty-kicker {
+  color: #d3e9d7;
+}
+
+.viewport-empty-state.has-error .empty-kicker {
+  color: #ffb6b6;
 }
 
 .sidebar {
@@ -265,6 +337,21 @@ input:disabled {
   background: #f0d492;
   font-size: 0.75rem;
   font-weight: 800;
+}
+
+.status-badge.is-ready {
+  color: #164623;
+  background: #b8e6c1;
+}
+
+.status-badge.is-error {
+  color: #ffffff;
+  background: #a03b3b;
+}
+
+.status-badge.is-warning {
+  color: #5a3600;
+  background: #f0be65;
 }
 
 .stats-list {
