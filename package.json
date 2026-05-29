@@ -1,0 +1,29 @@
+{
+  "name": "3dmodelviewer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haider855/3DModelViewer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/haider855/3DModelViewer/issues"
+  },
+  "homepage": "https://github.com/haider855/3DModelViewer#readme",
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.10.1",
+    "@babylonjs/loaders": "^9.10.1"
+  }
+}
