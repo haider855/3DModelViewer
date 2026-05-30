@@ -5,6 +5,7 @@ import {
   SUPPORTED_MODEL_EXTENSIONS,
 } from "./loading/SupportedFormats";
 import { validateModelFile } from "./loading/FileValidator";
+import { ModelLoader } from "./loading/ModelLoader";
 import { formatBytes } from "./utils/formatBytes";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -60,8 +61,8 @@ appRoot.innerHTML = `
           ></canvas>
           <div class="viewport-empty-state" data-empty-state>
             <p class="empty-kicker">Ready for model inspection</p>
-            <h2>Upload a GLB or GLTF file</h2>
-            <p>Upload a GLB or GLTF file to inspect it in the browser.</p>
+            <h2 data-overlay-heading>Upload a GLB or GLTF file</h2>
+            <p data-overlay-copy>Upload a GLB or GLTF file to inspect it in the browser.</p>
             <button class="primary-button" type="button" data-upload-button>Choose file</button>
             <p class="drop-copy">Drag a .glb or .gltf file anywhere onto the viewport.</p>
             <p class="status-message" data-status-message role="status">
@@ -150,8 +151,14 @@ if (!canvas) {
 }
 
 const viewerEngine = new BabylonEngine(canvas);
+const modelLoader = new ModelLoader(
+  viewerEngine.sceneManager.scene,
+  viewerEngine.sceneManager.modelRoot,
+);
 const dropZone = requireElement<HTMLDivElement>("[data-drop-zone]");
 const emptyState = requireElement<HTMLDivElement>("[data-empty-state]");
+const overlayHeading = requireElement<HTMLHeadingElement>("[data-overlay-heading]");
+const overlayCopy = requireElement<HTMLParagraphElement>("[data-overlay-copy]");
 const uploadButtons = Array.from(
   appRoot.querySelectorAll<HTMLButtonElement>("[data-upload-button]"),
 );
@@ -162,7 +169,10 @@ const statusMessage = requireElement<HTMLParagraphElement>("[data-status-message
 const fileNameStat = requireElement<HTMLElement>('[data-stat="fileName"]');
 const fileSizeStat = requireElement<HTMLElement>('[data-stat="fileSize"]');
 const fileTypeStat = requireElement<HTMLElement>('[data-stat="fileType"]');
+const meshCountStat = requireElement<HTMLElement>('[data-stat="meshes"]');
 let activeDragEvents = 0;
+let loadRequestId = 0;
+let isLoading = false;
 const handleWindowDragEnd = (): void => {
   activeDragEvents = 0;
   dropZone.classList.remove("is-drag-over");
@@ -178,21 +188,33 @@ function requireElement<TElement extends Element>(selector: string): TElement {
   return element;
 }
 
-function setStatus(message: string, status: "empty" | "ready" | "error" | "warning"): void {
+function setStatus(
+  message: string,
+  status: "empty" | "ready" | "error" | "warning" | "loading",
+): void {
   statusMessage.textContent = message;
   statusMessage.className = `status-message is-${status}`;
 }
 
 function resetSelectedFile(): void {
+  loadRequestId += 1;
+  isLoading = false;
+  modelLoader.clearModel();
   fileInput.value = "";
   loadStatus.textContent = "No model loaded";
   statusBadge.textContent = "Empty";
   statusBadge.className = "status-badge";
-  emptyState.classList.remove("has-file", "has-error");
+  emptyState.classList.remove("has-file", "has-error", "is-loading", "is-hidden");
+  overlayHeading.textContent = "Upload a GLB or GLTF file";
+  overlayCopy.textContent = "Upload a GLB or GLTF file to inspect it in the browser.";
   clearButton.disabled = true;
+  uploadButtons.forEach((button) => {
+    button.disabled = false;
+  });
   fileNameStat.textContent = "-";
   fileSizeStat.textContent = "-";
   fileTypeStat.textContent = "-";
+  meshCountStat.textContent = "-";
   setStatus("No file selected.", "empty");
 }
 
@@ -201,10 +223,12 @@ function handleRejectedFile(message: string): void {
   statusBadge.textContent = "Error";
   statusBadge.className = "status-badge is-error";
   emptyState.classList.add("has-error");
+  overlayHeading.textContent = "The model could not be loaded";
+  overlayCopy.textContent = "Choose a supported GLB or GLTF file and try again.";
   setStatus(message, "error");
 }
 
-function handleAcceptedFile(file: File): void {
+async function handleAcceptedFile(file: File): Promise<void> {
   const result = validateModelFile(file);
 
   if (!result.ok) {
@@ -212,31 +236,81 @@ function handleAcceptedFile(file: File): void {
     return;
   }
 
-  loadStatus.textContent = "File selected";
-  statusBadge.textContent = "Selected";
-  statusBadge.className = "status-badge is-ready";
-  emptyState.classList.remove("has-error");
+  const currentLoadId = loadRequestId + 1;
+  loadRequestId = currentLoadId;
+  isLoading = true;
+
+  loadStatus.textContent = "Loading model";
+  statusBadge.textContent = "Loading";
+  statusBadge.className = "status-badge is-loading";
+  emptyState.classList.remove("has-error", "is-hidden");
   emptyState.classList.add("has-file");
-  clearButton.disabled = false;
+  emptyState.classList.add("is-loading");
+  overlayHeading.textContent = "Loading model...";
+  overlayCopy.textContent = "Importing the selected asset into the local scene.";
+  clearButton.disabled = true;
+  uploadButtons.forEach((button) => {
+    button.disabled = true;
+  });
 
   fileNameStat.textContent = result.fileInfo.name;
   fileSizeStat.textContent = formatBytes(result.fileInfo.sizeBytes);
   fileTypeStat.textContent = result.fileInfo.extension.slice(1).toUpperCase();
-
-  if (result.warningMessage) {
-    statusBadge.textContent = "Large";
-    statusBadge.className = "status-badge is-warning";
-    setStatus(result.warningMessage, "warning");
-    return;
-  }
+  meshCountStat.textContent = "-";
 
   setStatus(
-    `${result.fileInfo.name} is ready for loading in the next phase.`,
-    "ready",
+    result.warningMessage ?? `Loading ${result.fileInfo.name}...`,
+    result.warningMessage ? "warning" : "loading",
   );
+
+  try {
+    const loadedModel = await modelLoader.loadModel(result.file);
+
+    if (currentLoadId !== loadRequestId) {
+      return;
+    }
+
+    loadStatus.textContent = "Model loaded";
+    statusBadge.textContent = "Loaded";
+    statusBadge.className = "status-badge is-ready";
+    emptyState.classList.remove("is-loading", "has-error");
+    emptyState.classList.add("is-hidden");
+    clearButton.disabled = false;
+    uploadButtons.forEach((button) => {
+      button.disabled = false;
+    });
+    isLoading = false;
+    meshCountStat.textContent = loadedModel.meshes.length.toLocaleString();
+    setStatus(`${result.fileInfo.name} loaded successfully.`, "ready");
+  } catch (error) {
+    if (currentLoadId !== loadRequestId) {
+      return;
+    }
+
+    modelLoader.clearModel();
+    loadStatus.textContent = "Load failed";
+    statusBadge.textContent = "Error";
+    statusBadge.className = "status-badge is-error";
+    emptyState.classList.remove("is-loading", "is-hidden");
+    emptyState.classList.add("has-error");
+    overlayHeading.textContent = "The model could not be loaded";
+    overlayCopy.textContent = "The file may be corrupted or unsupported.";
+    clearButton.disabled = false;
+    uploadButtons.forEach((button) => {
+      button.disabled = false;
+    });
+    isLoading = false;
+    meshCountStat.textContent = "-";
+    setStatus(getLoadErrorMessage(error), "error");
+  }
 }
 
 function handleFileList(files: FileList | null): void {
+  if (isLoading) {
+    setStatus("A model is already loading. Please wait for it to finish.", "loading");
+    return;
+  }
+
   const file = files?.item(0) ?? null;
   const result = validateModelFile(file);
 
@@ -245,7 +319,15 @@ function handleFileList(files: FileList | null): void {
     return;
   }
 
-  handleAcceptedFile(result.file);
+  void handleAcceptedFile(result.file);
+}
+
+function getLoadErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return "The model could not be loaded. The file may be corrupted or unsupported.";
+  }
+
+  return "The model could not be loaded. The file may be corrupted or unsupported.";
 }
 
 uploadButtons.forEach((button) => {
@@ -292,6 +374,7 @@ window.addEventListener("dragend", handleWindowDragEnd);
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
+    modelLoader.dispose();
     viewerEngine.dispose();
     window.removeEventListener("dragend", handleWindowDragEnd);
     fileInput.remove();

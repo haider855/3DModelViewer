@@ -276,6 +276,11 @@ input:disabled {
   background: rgba(76, 143, 92, 0.28);
 }
 
+.status-message.is-loading {
+  color: #d8e3ec;
+  background: rgba(46, 107, 143, 0.28);
+}
+
 .status-message.is-error {
   color: #ffdddd;
   background: rgba(160, 59, 59, 0.3);
@@ -290,8 +295,16 @@ input:disabled {
   color: #d3e9d7;
 }
 
+.viewport-empty-state.is-loading .empty-kicker {
+  color: #c9ddff;
+}
+
 .viewport-empty-state.has-error .empty-kicker {
   color: #ffb6b6;
+}
+
+.viewport-empty-state.is-hidden {
+  display: none;
 }
 
 .sidebar {
@@ -342,6 +355,11 @@ input:disabled {
 .status-badge.is-ready {
   color: #164623;
   background: #b8e6c1;
+}
+
+.status-badge.is-loading {
+  color: #123f66;
+  background: #b8d9f0;
 }
 
 .status-badge.is-error {

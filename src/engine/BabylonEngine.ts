@@ -4,7 +4,7 @@ import { SceneManager } from "./SceneManager";
 
 export class BabylonEngine {
   private readonly engine: Engine;
-  private readonly sceneManager: SceneManager;
+  readonly sceneManager: SceneManager;
   private readonly handleResize = (): void => {
     this.engine.resize();
   };

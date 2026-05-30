@@ -51,7 +51,7 @@ export function validateModelFile(file: File | null): FileValidationResult {
     },
     warningMessage:
       file.size >= LARGE_FILE_WARNING_BYTES
-        ? "Large file selected. It may take longer to load in the next phase."
+        ? "Large file selected. It may take longer to load."
         : null,
   };
 }
