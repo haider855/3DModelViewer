@@ -59,6 +59,11 @@ export class ModelLoader {
       child.dispose(false, true);
     }
 
+    this.sceneModelRoot.position.setAll(0);
+    this.sceneModelRoot.rotation.setAll(0);
+    this.sceneModelRoot.scaling.setAll(1);
+    this.sceneModelRoot.rotationQuaternion = null;
+    this.sceneModelRoot.computeWorldMatrix(true);
     this.loadedModel = null;
   }
 

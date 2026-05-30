@@ -2,6 +2,9 @@ import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Scene } from "@babylonjs/core/scene";
 
+import type { ModelBounds } from "../inspection/BoundingBoxAnalyzer";
+import { fitCameraToModel } from "../utils/fitCameraToModel";
+
 export class CameraManager {
   readonly camera: ArcRotateCamera;
 
@@ -23,5 +26,14 @@ export class CameraManager {
     this.camera.wheelDeltaPercentage = 0.01;
     this.camera.panningSensibility = 120;
     this.camera.useBouncingBehavior = true;
+    this.camera.storeState();
+  }
+
+  frameModel(bounds: ModelBounds): void {
+    fitCameraToModel(this.camera, bounds);
+  }
+
+  resetToStoredFrame(): void {
+    this.camera.restoreState();
   }
 }

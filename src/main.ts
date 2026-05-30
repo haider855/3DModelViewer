@@ -6,6 +6,8 @@ import {
 } from "./loading/SupportedFormats";
 import { validateModelFile } from "./loading/FileValidator";
 import { ModelLoader } from "./loading/ModelLoader";
+import { centerModelAtOrigin } from "./inspection/BoundingBoxAnalyzer";
+import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { formatBytes } from "./utils/formatBytes";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -45,7 +47,7 @@ appRoot.innerHTML = `
         </div>
 
         <div class="control-group" aria-label="Scene actions">
-          <button class="toolbar-button" type="button" disabled>Reset</button>
+          <button class="toolbar-button" type="button" data-reset-camera-button disabled>Reset</button>
           <button class="toolbar-button danger" type="button" data-clear-button disabled>Clear</button>
         </div>
       </nav>
@@ -170,6 +172,8 @@ const fileNameStat = requireElement<HTMLElement>('[data-stat="fileName"]');
 const fileSizeStat = requireElement<HTMLElement>('[data-stat="fileSize"]');
 const fileTypeStat = requireElement<HTMLElement>('[data-stat="fileType"]');
 const meshCountStat = requireElement<HTMLElement>('[data-stat="meshes"]');
+const dimensionsStat = requireElement<HTMLElement>('[data-stat="dimensions"]');
+const resetCameraButton = requireElement<HTMLButtonElement>("[data-reset-camera-button]");
 let activeDragEvents = 0;
 let loadRequestId = 0;
 let isLoading = false;
@@ -215,6 +219,8 @@ function resetSelectedFile(): void {
   fileSizeStat.textContent = "-";
   fileTypeStat.textContent = "-";
   meshCountStat.textContent = "-";
+  dimensionsStat.textContent = "-";
+  resetCameraButton.disabled = true;
   setStatus("No file selected.", "empty");
 }
 
@@ -249,6 +255,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
   overlayHeading.textContent = "Loading model...";
   overlayCopy.textContent = "Importing the selected asset into the local scene.";
   clearButton.disabled = true;
+  resetCameraButton.disabled = true;
   uploadButtons.forEach((button) => {
     button.disabled = true;
   });
@@ -257,6 +264,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
   fileSizeStat.textContent = formatBytes(result.fileInfo.sizeBytes);
   fileTypeStat.textContent = result.fileInfo.extension.slice(1).toUpperCase();
   meshCountStat.textContent = "-";
+  dimensionsStat.textContent = "-";
 
   setStatus(
     result.warningMessage ?? `Loading ${result.fileInfo.name}...`,
@@ -267,8 +275,17 @@ async function handleAcceptedFile(file: File): Promise<void> {
     const loadedModel = await modelLoader.loadModel(result.file);
 
     if (currentLoadId !== loadRequestId) {
+      modelLoader.clearModel();
       return;
     }
+
+    const modelBounds = centerModelAtOrigin(loadedModel.rootNode, loadedModel.meshes);
+
+    if (!modelBounds) {
+      throw new Error("The model does not contain renderable mesh geometry.");
+    }
+
+    viewerEngine.sceneManager.cameraManager.frameModel(modelBounds);
 
     loadStatus.textContent = "Model loaded";
     statusBadge.textContent = "Loaded";
@@ -281,6 +298,8 @@ async function handleAcceptedFile(file: File): Promise<void> {
     });
     isLoading = false;
     meshCountStat.textContent = loadedModel.meshes.length.toLocaleString();
+    dimensionsStat.textContent = formatDimensions(modelBounds.size);
+    resetCameraButton.disabled = false;
     setStatus(`${result.fileInfo.name} loaded successfully.`, "ready");
   } catch (error) {
     if (currentLoadId !== loadRequestId) {
@@ -301,6 +320,8 @@ async function handleAcceptedFile(file: File): Promise<void> {
     });
     isLoading = false;
     meshCountStat.textContent = "-";
+    dimensionsStat.textContent = "-";
+    resetCameraButton.disabled = true;
     setStatus(getLoadErrorMessage(error), "error");
   }
 }
@@ -330,6 +351,14 @@ function getLoadErrorMessage(error: unknown): string {
   return "The model could not be loaded. The file may be corrupted or unsupported.";
 }
 
+function formatDimensions(size: Vector3): string {
+  const formatter = new Intl.NumberFormat("en", {
+    maximumFractionDigits: 2,
+  });
+
+  return `${formatter.format(size.x)} x ${formatter.format(size.y)} x ${formatter.format(size.z)}`;
+}
+
 uploadButtons.forEach((button) => {
   button.addEventListener("click", () => {
     fileInput.click();
@@ -342,6 +371,10 @@ fileInput.addEventListener("change", () => {
 
 clearButton.addEventListener("click", () => {
   resetSelectedFile();
+});
+
+resetCameraButton.addEventListener("click", () => {
+  viewerEngine.sceneManager.cameraManager.resetToStoredFrame();
 });
 
 dropZone.addEventListener("dragenter", (event) => {
