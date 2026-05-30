@@ -16,6 +16,12 @@ import { formatBytes } from "./utils/formatBytes";
 import { formatNumber } from "./utils/formatNumber";
 import { ViewModeController } from "./view-modes/ViewModeController";
 import { isViewMode, type ViewMode } from "./view-modes/ViewModeTypes";
+import {
+  isCameraProjectionMode,
+  isFixedCameraView,
+  type CameraProjectionMode,
+  type FixedCameraView,
+} from "./engine/CameraTypes";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -46,11 +52,11 @@ appRoot.innerHTML = `
         </div>
 
         <div class="control-group" aria-label="Camera controls">
-          <button class="toolbar-button is-active" type="button" disabled>Perspective</button>
-          <button class="toolbar-button" type="button" disabled>Orthographic</button>
-          <button class="toolbar-button" type="button" disabled>Front</button>
-          <button class="toolbar-button" type="button" disabled>Side</button>
-          <button class="toolbar-button" type="button" disabled>Top</button>
+          <button class="toolbar-button is-active" type="button" data-camera-projection-button data-camera-projection="perspective" disabled>Perspective</button>
+          <button class="toolbar-button" type="button" data-camera-projection-button data-camera-projection="orthographic" disabled>Orthographic</button>
+          <button class="toolbar-button" type="button" data-fixed-view-button data-fixed-view="front" disabled>Front</button>
+          <button class="toolbar-button" type="button" data-fixed-view-button data-fixed-view="side" disabled>Side</button>
+          <button class="toolbar-button" type="button" data-fixed-view-button data-fixed-view="top" disabled>Top</button>
         </div>
 
         <div class="control-group" aria-label="Scene actions">
@@ -175,6 +181,12 @@ const uploadButtons = Array.from(
 const viewModeButtons = Array.from(
   appRoot.querySelectorAll<HTMLButtonElement>("[data-view-mode-button]"),
 );
+const cameraProjectionButtons = Array.from(
+  appRoot.querySelectorAll<HTMLButtonElement>("[data-camera-projection-button]"),
+);
+const fixedViewButtons = Array.from(
+  appRoot.querySelectorAll<HTMLButtonElement>("[data-fixed-view-button]"),
+);
 const clearButton = requireElement<HTMLButtonElement>("[data-clear-button]");
 const loadStatus = requireElement<HTMLParagraphElement>("[data-load-status]");
 const statusBadge = requireElement<HTMLSpanElement>("[data-status-badge]");
@@ -219,6 +231,7 @@ function resetSelectedFile(): void {
   isLoading = false;
   viewModeController.clearModel();
   modelLoader.clearModel();
+  viewerEngine.sceneManager.cameraManager.setProjectionMode("perspective");
   fileInput.value = "";
   loadStatus.textContent = "No model loaded";
   statusBadge.textContent = "Empty";
@@ -236,6 +249,9 @@ function resetSelectedFile(): void {
   resetModelStats();
   setViewModeControlsEnabled(false);
   setActiveViewMode("material");
+  setCameraControlsEnabled(false);
+  setActiveCameraProjectionMode(viewerEngine.sceneManager.cameraManager.getProjectionMode());
+  setActiveFixedView(null);
   resetCameraButton.disabled = true;
   setStatus("No file selected.", "empty");
 }
@@ -274,6 +290,8 @@ async function handleAcceptedFile(file: File): Promise<void> {
   resetCameraButton.disabled = true;
   setViewModeControlsEnabled(false);
   setActiveViewMode("material");
+  setCameraControlsEnabled(false);
+  setActiveFixedView(null);
   uploadButtons.forEach((button) => {
     button.disabled = true;
   });
@@ -320,6 +338,9 @@ async function handleAcceptedFile(file: File): Promise<void> {
     renderModelStats(modelStats);
     setViewModeControlsEnabled(true);
     setActiveViewMode(viewModeController.getViewMode());
+    setCameraControlsEnabled(true);
+    setActiveCameraProjectionMode(viewerEngine.sceneManager.cameraManager.getProjectionMode());
+    setActiveFixedView(null);
     resetCameraButton.disabled = false;
     setStatus(`${result.fileInfo.name} loaded successfully.`, "ready");
   } catch (error) {
@@ -329,6 +350,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
 
     viewModeController.clearModel();
     modelLoader.clearModel();
+    viewerEngine.sceneManager.cameraManager.setProjectionMode("perspective");
     loadStatus.textContent = "Load failed";
     statusBadge.textContent = "Error";
     statusBadge.className = "status-badge is-error";
@@ -344,6 +366,9 @@ async function handleAcceptedFile(file: File): Promise<void> {
     resetModelStats();
     setViewModeControlsEnabled(false);
     setActiveViewMode("material");
+    setCameraControlsEnabled(false);
+    setActiveCameraProjectionMode(viewerEngine.sceneManager.cameraManager.getProjectionMode());
+    setActiveFixedView(null);
     resetCameraButton.disabled = true;
     setStatus(getLoadErrorMessage(error), "error");
   }
@@ -402,6 +427,24 @@ function setActiveViewMode(viewMode: ViewMode): void {
   }
 }
 
+function setCameraControlsEnabled(isEnabled: boolean): void {
+  for (const button of [...cameraProjectionButtons, ...fixedViewButtons]) {
+    button.disabled = !isEnabled;
+  }
+}
+
+function setActiveCameraProjectionMode(mode: CameraProjectionMode): void {
+  for (const button of cameraProjectionButtons) {
+    button.classList.toggle("is-active", button.dataset.cameraProjection === mode);
+  }
+}
+
+function setActiveFixedView(view: FixedCameraView | null): void {
+  for (const button of fixedViewButtons) {
+    button.classList.toggle("is-active", button.dataset.fixedView === view);
+  }
+}
+
 function formatDimensions(dimensions: ModelDimensions): string {
   const formatter = new Intl.NumberFormat("en", {
     maximumFractionDigits: 2,
@@ -431,6 +474,32 @@ viewModeButtons.forEach((button) => {
   });
 });
 
+cameraProjectionButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const { cameraProjection } = button.dataset;
+
+    if (!isCameraProjectionMode(cameraProjection)) {
+      return;
+    }
+
+    viewerEngine.sceneManager.cameraManager.setProjectionMode(cameraProjection);
+    setActiveCameraProjectionMode(cameraProjection);
+  });
+});
+
+fixedViewButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const { fixedView } = button.dataset;
+
+    if (!isFixedCameraView(fixedView)) {
+      return;
+    }
+
+    viewerEngine.sceneManager.cameraManager.setFixedView(fixedView);
+    setActiveFixedView(fixedView);
+  });
+});
+
 fileInput.addEventListener("change", () => {
   handleFileList(fileInput.files);
 });
@@ -441,6 +510,7 @@ clearButton.addEventListener("click", () => {
 
 resetCameraButton.addEventListener("click", () => {
   viewerEngine.sceneManager.cameraManager.resetToStoredFrame();
+  setActiveFixedView(null);
 });
 
 dropZone.addEventListener("dragenter", (event) => {

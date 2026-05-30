@@ -7,6 +7,7 @@ export class BabylonEngine {
   readonly sceneManager: SceneManager;
   private readonly handleResize = (): void => {
     this.engine.resize();
+    this.sceneManager.cameraManager.updateForResize();
   };
 
   constructor(canvas: HTMLCanvasElement) {

@@ -8,12 +8,21 @@ const DEFAULT_BETA = Math.PI / 3;
 const FRAME_PADDING = 1.25;
 const MIN_FRAME_RADIUS = 0.01;
 
-export function fitCameraToModel(camera: ArcRotateCamera, bounds: ModelBounds): void {
+export interface CameraFrame {
+  alpha: number;
+  beta: number;
+  radius: number;
+  target: Vector3;
+  orthoHalfHeight: number;
+}
+
+export function fitCameraToModel(camera: ArcRotateCamera, bounds: ModelBounds): CameraFrame {
   const frameRadius = Math.max(bounds.radius, MIN_FRAME_RADIUS);
   const distance = calculateCameraDistance(camera, frameRadius);
+  const target = Vector3.Zero();
 
   camera.stopInterpolation();
-  camera.setTarget(Vector3.Zero());
+  camera.setTarget(target);
   camera.alpha = DEFAULT_ALPHA;
   camera.beta = DEFAULT_BETA;
   camera.radius = distance;
@@ -22,7 +31,14 @@ export function fitCameraToModel(camera: ArcRotateCamera, bounds: ModelBounds): 
   camera.panningDistanceLimit = Math.max(frameRadius * 4, 1);
   camera.minZ = Math.max(distance / 1000, 0.0001);
   camera.maxZ = Math.max(distance + frameRadius * 8, 100);
-  camera.storeState();
+
+  return {
+    alpha: DEFAULT_ALPHA,
+    beta: DEFAULT_BETA,
+    radius: distance,
+    target,
+    orthoHalfHeight: frameRadius * FRAME_PADDING,
+  };
 }
 
 function calculateCameraDistance(camera: ArcRotateCamera, radius: number): number {
