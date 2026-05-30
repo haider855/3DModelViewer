@@ -14,6 +14,8 @@ import {
 } from "./inspection/ModelStats";
 import { formatBytes } from "./utils/formatBytes";
 import { formatNumber } from "./utils/formatNumber";
+import { ViewModeController } from "./view-modes/ViewModeController";
+import { isViewMode, type ViewMode } from "./view-modes/ViewModeTypes";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -38,9 +40,9 @@ appRoot.innerHTML = `
         <button class="primary-button" type="button" data-upload-button>Upload</button>
 
         <div class="control-group" aria-label="View mode controls">
-          <button class="toolbar-button is-active" type="button" disabled>Material</button>
-          <button class="toolbar-button" type="button" disabled>Solid</button>
-          <button class="toolbar-button" type="button" disabled>Wireframe</button>
+          <button class="toolbar-button is-active" type="button" data-view-mode-button data-view-mode="material" disabled>Material</button>
+          <button class="toolbar-button" type="button" data-view-mode-button data-view-mode="solid" disabled>Solid</button>
+          <button class="toolbar-button" type="button" data-view-mode-button data-view-mode="wireframe" disabled>Wireframe</button>
         </div>
 
         <div class="control-group" aria-label="Camera controls">
@@ -162,12 +164,16 @@ const modelLoader = new ModelLoader(
   viewerEngine.sceneManager.scene,
   viewerEngine.sceneManager.modelRoot,
 );
+const viewModeController = new ViewModeController(viewerEngine.sceneManager.scene);
 const dropZone = requireElement<HTMLDivElement>("[data-drop-zone]");
 const emptyState = requireElement<HTMLDivElement>("[data-empty-state]");
 const overlayHeading = requireElement<HTMLHeadingElement>("[data-overlay-heading]");
 const overlayCopy = requireElement<HTMLParagraphElement>("[data-overlay-copy]");
 const uploadButtons = Array.from(
   appRoot.querySelectorAll<HTMLButtonElement>("[data-upload-button]"),
+);
+const viewModeButtons = Array.from(
+  appRoot.querySelectorAll<HTMLButtonElement>("[data-view-mode-button]"),
 );
 const clearButton = requireElement<HTMLButtonElement>("[data-clear-button]");
 const loadStatus = requireElement<HTMLParagraphElement>("[data-load-status]");
@@ -211,6 +217,7 @@ function setStatus(
 function resetSelectedFile(): void {
   loadRequestId += 1;
   isLoading = false;
+  viewModeController.clearModel();
   modelLoader.clearModel();
   fileInput.value = "";
   loadStatus.textContent = "No model loaded";
@@ -227,6 +234,8 @@ function resetSelectedFile(): void {
   fileSizeStat.textContent = "-";
   fileTypeStat.textContent = "-";
   resetModelStats();
+  setViewModeControlsEnabled(false);
+  setActiveViewMode("material");
   resetCameraButton.disabled = true;
   setStatus("No file selected.", "empty");
 }
@@ -263,6 +272,8 @@ async function handleAcceptedFile(file: File): Promise<void> {
   overlayCopy.textContent = "Importing the selected asset into the local scene.";
   clearButton.disabled = true;
   resetCameraButton.disabled = true;
+  setViewModeControlsEnabled(false);
+  setActiveViewMode("material");
   uploadButtons.forEach((button) => {
     button.disabled = true;
   });
@@ -278,6 +289,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
   );
 
   try {
+    viewModeController.clearModel();
     const loadedModel = await modelLoader.loadModel(result.file);
 
     if (currentLoadId !== loadRequestId) {
@@ -293,6 +305,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
 
     viewerEngine.sceneManager.cameraManager.frameModel(modelBounds);
     const modelStats = calculateModelStats(loadedModel.meshes, modelBounds);
+    viewModeController.setMeshes(loadedModel.meshes);
 
     loadStatus.textContent = "Model loaded";
     statusBadge.textContent = "Loaded";
@@ -305,6 +318,8 @@ async function handleAcceptedFile(file: File): Promise<void> {
     });
     isLoading = false;
     renderModelStats(modelStats);
+    setViewModeControlsEnabled(true);
+    setActiveViewMode(viewModeController.getViewMode());
     resetCameraButton.disabled = false;
     setStatus(`${result.fileInfo.name} loaded successfully.`, "ready");
   } catch (error) {
@@ -312,6 +327,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
       return;
     }
 
+    viewModeController.clearModel();
     modelLoader.clearModel();
     loadStatus.textContent = "Load failed";
     statusBadge.textContent = "Error";
@@ -326,6 +342,8 @@ async function handleAcceptedFile(file: File): Promise<void> {
     });
     isLoading = false;
     resetModelStats();
+    setViewModeControlsEnabled(false);
+    setActiveViewMode("material");
     resetCameraButton.disabled = true;
     setStatus(getLoadErrorMessage(error), "error");
   }
@@ -372,6 +390,18 @@ function renderModelStats(stats: ModelStats): void {
   dimensionsStat.textContent = formatDimensions(stats.dimensions);
 }
 
+function setViewModeControlsEnabled(isEnabled: boolean): void {
+  for (const button of viewModeButtons) {
+    button.disabled = !isEnabled;
+  }
+}
+
+function setActiveViewMode(viewMode: ViewMode): void {
+  for (const button of viewModeButtons) {
+    button.classList.toggle("is-active", button.dataset.viewMode === viewMode);
+  }
+}
+
 function formatDimensions(dimensions: ModelDimensions): string {
   const formatter = new Intl.NumberFormat("en", {
     maximumFractionDigits: 2,
@@ -385,6 +415,19 @@ function formatDimensions(dimensions: ModelDimensions): string {
 uploadButtons.forEach((button) => {
   button.addEventListener("click", () => {
     fileInput.click();
+  });
+});
+
+viewModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const { viewMode } = button.dataset;
+
+    if (!isViewMode(viewMode)) {
+      return;
+    }
+
+    viewModeController.setViewMode(viewMode);
+    setActiveViewMode(viewMode);
   });
 });
 
@@ -430,6 +473,7 @@ window.addEventListener("dragend", handleWindowDragEnd);
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
+    viewModeController.dispose();
     modelLoader.dispose();
     viewerEngine.dispose();
     window.removeEventListener("dragend", handleWindowDragEnd);
