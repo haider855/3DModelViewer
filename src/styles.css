@@ -130,6 +130,10 @@ h1 {
   font-size: 0.86rem;
   font-weight: 700;
   letter-spacing: 0;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
 }
 
 .primary-button {
@@ -153,6 +157,24 @@ h1 {
   background: #25313a;
 }
 
+.primary-button:not(:disabled),
+.toolbar-button:not(:disabled),
+.toggle-row input:not(:disabled) {
+  cursor: pointer;
+}
+
+.primary-button:not(:disabled):hover {
+  background: #255978;
+}
+
+.toolbar-button:not(:disabled):hover {
+  background: #e9eef2;
+}
+
+.toolbar-button.is-active:not(:disabled):hover {
+  background: #1f2931;
+}
+
 .toolbar-button.danger {
   color: #a03b3b;
 }
@@ -160,7 +182,7 @@ h1 {
 button:disabled,
 input:disabled {
   cursor: not-allowed;
-  opacity: 0.82;
+  opacity: 0.52;
 }
 
 .workspace {
@@ -295,8 +317,16 @@ input:disabled {
   color: #d3e9d7;
 }
 
+.viewport-empty-state.is-loading {
+  background: rgba(10, 18, 26, 0.18);
+}
+
 .viewport-empty-state.is-loading .empty-kicker {
   color: #c9ddff;
+}
+
+.viewport-empty-state.has-error {
+  background: rgba(70, 20, 20, 0.14);
 }
 
 .viewport-empty-state.has-error .empty-kicker {
@@ -408,6 +438,7 @@ input:disabled {
   gap: 10px;
   color: #2f363d;
   font-size: 0.9rem;
+  user-select: none;
 }
 
 .toggle-row:first-of-type {

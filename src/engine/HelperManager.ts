@@ -32,6 +32,24 @@ export class HelperManager {
     );
   }
 
+  setGridVisible(isVisible: boolean): void {
+    this.grid.setEnabled(isVisible);
+  }
+
+  setAxesVisible(isVisible: boolean): void {
+    this.xAxis.setEnabled(isVisible);
+    this.yAxis.setEnabled(isVisible);
+    this.zAxis.setEnabled(isVisible);
+  }
+
+  getGridVisible(): boolean {
+    return this.grid.isEnabled();
+  }
+
+  getAxesVisible(): boolean {
+    return this.xAxis.isEnabled() && this.yAxis.isEnabled() && this.zAxis.isEnabled();
+  }
+
   private createGrid(scene: Scene): LinesMesh {
     const size = 10;
     const lines: Vector3[][] = [];

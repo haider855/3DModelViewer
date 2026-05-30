@@ -7,6 +7,9 @@ import { CameraManager } from "./CameraManager";
 import { HelperManager } from "./HelperManager";
 import { LightingManager } from "./LightingManager";
 
+const DEFAULT_BACKGROUND = new Color4(0.08, 0.09, 0.11, 1);
+const NEUTRAL_BACKGROUND = new Color4(0.54, 0.57, 0.6, 1);
+
 export class SceneManager {
   readonly scene: Scene;
   readonly cameraManager: CameraManager;
@@ -15,11 +18,19 @@ export class SceneManager {
 
   constructor(engine: Engine, canvas: HTMLCanvasElement) {
     this.scene = new Scene(engine);
-    this.scene.clearColor = new Color4(0.08, 0.09, 0.11, 1);
+    this.scene.clearColor = DEFAULT_BACKGROUND.clone();
 
     this.modelRoot = new TransformNode("model-root", this.scene);
     this.cameraManager = new CameraManager(this.scene, canvas);
     new LightingManager(this.scene);
     this.helperManager = new HelperManager(this.scene);
+  }
+
+  setNeutralBackground(isNeutral: boolean): void {
+    this.scene.clearColor = (isNeutral ? NEUTRAL_BACKGROUND : DEFAULT_BACKGROUND).clone();
+  }
+
+  getNeutralBackground(): boolean {
+    return this.scene.clearColor.equals(NEUTRAL_BACKGROUND);
   }
 }

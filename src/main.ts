@@ -132,15 +132,15 @@ appRoot.innerHTML = `
         <section class="sidebar-section">
           <h2>Scene Helpers</h2>
           <label class="toggle-row">
-            <input type="checkbox" checked disabled />
+            <input type="checkbox" data-grid-toggle checked />
             <span>Grid</span>
           </label>
           <label class="toggle-row">
-            <input type="checkbox" checked disabled />
+            <input type="checkbox" data-axes-toggle checked />
             <span>Axes</span>
           </label>
           <label class="toggle-row">
-            <input type="checkbox" disabled />
+            <input type="checkbox" data-neutral-background-toggle />
             <span>Neutral background</span>
           </label>
         </section>
@@ -200,6 +200,11 @@ const vertexCountStat = requireElement<HTMLElement>('[data-stat="vertices"]');
 const triangleCountStat = requireElement<HTMLElement>('[data-stat="triangles"]');
 const dimensionsStat = requireElement<HTMLElement>('[data-stat="dimensions"]');
 const resetCameraButton = requireElement<HTMLButtonElement>("[data-reset-camera-button]");
+const gridToggle = requireElement<HTMLInputElement>("[data-grid-toggle]");
+const axesToggle = requireElement<HTMLInputElement>("[data-axes-toggle]");
+const neutralBackgroundToggle = requireElement<HTMLInputElement>(
+  "[data-neutral-background-toggle]",
+);
 let activeDragEvents = 0;
 let loadRequestId = 0;
 let isLoading = false;
@@ -445,6 +450,14 @@ function setActiveFixedView(view: FixedCameraView | null): void {
   }
 }
 
+function syncSceneHelperControls(): void {
+  const { helperManager } = viewerEngine.sceneManager;
+
+  gridToggle.checked = helperManager.getGridVisible();
+  axesToggle.checked = helperManager.getAxesVisible();
+  neutralBackgroundToggle.checked = viewerEngine.sceneManager.getNeutralBackground();
+}
+
 function formatDimensions(dimensions: ModelDimensions): string {
   const formatter = new Intl.NumberFormat("en", {
     maximumFractionDigits: 2,
@@ -504,6 +517,18 @@ fileInput.addEventListener("change", () => {
   handleFileList(fileInput.files);
 });
 
+gridToggle.addEventListener("change", () => {
+  viewerEngine.sceneManager.helperManager.setGridVisible(gridToggle.checked);
+});
+
+axesToggle.addEventListener("change", () => {
+  viewerEngine.sceneManager.helperManager.setAxesVisible(axesToggle.checked);
+});
+
+neutralBackgroundToggle.addEventListener("change", () => {
+  viewerEngine.sceneManager.setNeutralBackground(neutralBackgroundToggle.checked);
+});
+
 clearButton.addEventListener("click", () => {
   resetSelectedFile();
 });
@@ -540,6 +565,7 @@ dropZone.addEventListener("drop", (event) => {
 });
 
 window.addEventListener("dragend", handleWindowDragEnd);
+syncSceneHelperControls();
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
