@@ -7,8 +7,13 @@ import {
 import { validateModelFile } from "./loading/FileValidator";
 import { ModelLoader } from "./loading/ModelLoader";
 import { centerModelAtOrigin } from "./inspection/BoundingBoxAnalyzer";
-import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import {
+  calculateModelStats,
+  type ModelDimensions,
+  type ModelStats,
+} from "./inspection/ModelStats";
 import { formatBytes } from "./utils/formatBytes";
+import { formatNumber } from "./utils/formatNumber";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -172,6 +177,9 @@ const fileNameStat = requireElement<HTMLElement>('[data-stat="fileName"]');
 const fileSizeStat = requireElement<HTMLElement>('[data-stat="fileSize"]');
 const fileTypeStat = requireElement<HTMLElement>('[data-stat="fileType"]');
 const meshCountStat = requireElement<HTMLElement>('[data-stat="meshes"]');
+const materialCountStat = requireElement<HTMLElement>('[data-stat="materials"]');
+const vertexCountStat = requireElement<HTMLElement>('[data-stat="vertices"]');
+const triangleCountStat = requireElement<HTMLElement>('[data-stat="triangles"]');
 const dimensionsStat = requireElement<HTMLElement>('[data-stat="dimensions"]');
 const resetCameraButton = requireElement<HTMLButtonElement>("[data-reset-camera-button]");
 let activeDragEvents = 0;
@@ -218,8 +226,7 @@ function resetSelectedFile(): void {
   fileNameStat.textContent = "-";
   fileSizeStat.textContent = "-";
   fileTypeStat.textContent = "-";
-  meshCountStat.textContent = "-";
-  dimensionsStat.textContent = "-";
+  resetModelStats();
   resetCameraButton.disabled = true;
   setStatus("No file selected.", "empty");
 }
@@ -263,8 +270,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
   fileNameStat.textContent = result.fileInfo.name;
   fileSizeStat.textContent = formatBytes(result.fileInfo.sizeBytes);
   fileTypeStat.textContent = result.fileInfo.extension.slice(1).toUpperCase();
-  meshCountStat.textContent = "-";
-  dimensionsStat.textContent = "-";
+  resetModelStats();
 
   setStatus(
     result.warningMessage ?? `Loading ${result.fileInfo.name}...`,
@@ -286,6 +292,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
     }
 
     viewerEngine.sceneManager.cameraManager.frameModel(modelBounds);
+    const modelStats = calculateModelStats(loadedModel.meshes, modelBounds);
 
     loadStatus.textContent = "Model loaded";
     statusBadge.textContent = "Loaded";
@@ -297,8 +304,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
       button.disabled = false;
     });
     isLoading = false;
-    meshCountStat.textContent = loadedModel.meshes.length.toLocaleString();
-    dimensionsStat.textContent = formatDimensions(modelBounds.size);
+    renderModelStats(modelStats);
     resetCameraButton.disabled = false;
     setStatus(`${result.fileInfo.name} loaded successfully.`, "ready");
   } catch (error) {
@@ -319,8 +325,7 @@ async function handleAcceptedFile(file: File): Promise<void> {
       button.disabled = false;
     });
     isLoading = false;
-    meshCountStat.textContent = "-";
-    dimensionsStat.textContent = "-";
+    resetModelStats();
     resetCameraButton.disabled = true;
     setStatus(getLoadErrorMessage(error), "error");
   }
@@ -351,12 +356,30 @@ function getLoadErrorMessage(error: unknown): string {
   return "The model could not be loaded. The file may be corrupted or unsupported.";
 }
 
-function formatDimensions(size: Vector3): string {
+function resetModelStats(): void {
+  meshCountStat.textContent = "-";
+  materialCountStat.textContent = "-";
+  vertexCountStat.textContent = "-";
+  triangleCountStat.textContent = "-";
+  dimensionsStat.textContent = "-";
+}
+
+function renderModelStats(stats: ModelStats): void {
+  meshCountStat.textContent = formatNumber(stats.meshCount);
+  materialCountStat.textContent = formatNumber(stats.materialCount);
+  vertexCountStat.textContent = formatNumber(stats.vertexCount);
+  triangleCountStat.textContent = formatNumber(stats.triangleCount);
+  dimensionsStat.textContent = formatDimensions(stats.dimensions);
+}
+
+function formatDimensions(dimensions: ModelDimensions): string {
   const formatter = new Intl.NumberFormat("en", {
     maximumFractionDigits: 2,
   });
 
-  return `${formatter.format(size.x)} x ${formatter.format(size.y)} x ${formatter.format(size.z)}`;
+  return `${formatter.format(dimensions.width)} x ${formatter.format(
+    dimensions.height,
+  )} x ${formatter.format(dimensions.depth)}`;
 }
 
 uploadButtons.forEach((button) => {
