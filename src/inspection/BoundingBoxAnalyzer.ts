@@ -52,7 +52,7 @@ export function calculateModelBounds(meshes: readonly AbstractMesh[]): ModelBoun
   };
 }
 
-export function centerModelAtOrigin(
+export function centerModelOnFloor(
   modelRoot: TransformNode,
   meshes: readonly AbstractMesh[],
 ): ModelBounds | null {
@@ -62,7 +62,9 @@ export function centerModelAtOrigin(
     return null;
   }
 
-  modelRoot.position.subtractInPlace(bounds.center);
+  modelRoot.position.addInPlace(
+    new Vector3(-bounds.center.x, -bounds.minimum.y, -bounds.center.z),
+  );
   modelRoot.computeWorldMatrix(true);
 
   for (const mesh of meshes) {

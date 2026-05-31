@@ -54,9 +54,9 @@ export class CameraManager {
     this.storedFrame = this.readCurrentFrame(DEFAULT_FRAME.orthoHalfHeight);
   }
 
-  frameModel(bounds: ModelBounds): void {
+  frameModel(bounds: ModelBounds, sceneRadius?: number): void {
     this.setProjectionMode("perspective");
-    this.storedFrame = fitCameraToModel(this.camera, bounds);
+    this.storedFrame = fitCameraToModel(this.camera, bounds, sceneRadius);
     this.updateOrthographicBounds(this.storedFrame.orthoHalfHeight);
   }
 

@@ -1,5 +1,5 @@
 import type { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 import type { ModelBounds } from "../inspection/BoundingBoxAnalyzer";
 
@@ -16,10 +16,16 @@ export interface CameraFrame {
   orthoHalfHeight: number;
 }
 
-export function fitCameraToModel(camera: ArcRotateCamera, bounds: ModelBounds): CameraFrame {
+export function fitCameraToModel(
+  camera: ArcRotateCamera,
+  bounds: ModelBounds,
+  sceneRadius = bounds.radius,
+): CameraFrame {
   const frameRadius = Math.max(bounds.radius, MIN_FRAME_RADIUS);
+  const navigationRadius = Math.max(sceneRadius, frameRadius);
   const distance = calculateCameraDistance(camera, frameRadius);
-  const target = Vector3.Zero();
+  const target = bounds.center.clone();
+  const upperRadiusLimit = Math.max(distance * 8, navigationRadius * 3, frameRadius * 20, 10);
 
   camera.stopInterpolation();
   camera.setTarget(target);
@@ -27,10 +33,10 @@ export function fitCameraToModel(camera: ArcRotateCamera, bounds: ModelBounds): 
   camera.beta = DEFAULT_BETA;
   camera.radius = distance;
   camera.lowerRadiusLimit = Math.max(frameRadius * 0.02, 0.001);
-  camera.upperRadiusLimit = Math.max(distance * 8, frameRadius * 20, 10);
-  camera.panningDistanceLimit = Math.max(frameRadius * 4, 1);
+  camera.upperRadiusLimit = upperRadiusLimit;
+  camera.panningDistanceLimit = Math.max(navigationRadius * 2, frameRadius * 4, 1);
   camera.minZ = Math.max(distance / 1000, 0.0001);
-  camera.maxZ = Math.max(distance + frameRadius * 8, 100);
+  camera.maxZ = Math.max(upperRadiusLimit + navigationRadius * 3, 100);
 
   return {
     alpha: DEFAULT_ALPHA,

@@ -7,8 +7,8 @@ import { CameraManager } from "./CameraManager";
 import { HelperManager } from "./HelperManager";
 import { LightingManager } from "./LightingManager";
 
-const DEFAULT_BACKGROUND = new Color4(0.08, 0.09, 0.11, 1);
-const NEUTRAL_BACKGROUND = new Color4(0.54, 0.57, 0.6, 1);
+const DEFAULT_BACKGROUND = new Color4(0.055, 0.055, 0.055, 1);
+const NEUTRAL_BACKGROUND = new Color4(0.102, 0.102, 0.102, 1);
 
 export class SceneManager {
   readonly scene: Scene;
