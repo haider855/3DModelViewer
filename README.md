@@ -2,6 +2,10 @@
 
 A lightweight browser-based 3D model viewer for uploading, viewing, and inspecting `.glb` and `.gltf` files directly in the browser.
 
+## Live Demo
+
+[Open the 3D Model Viewer](https://haider855.github.io/3DModelViewer/)
+
 ## What It Does
 
 3D Model Viewer lets users upload a 3D model from their computer and inspect it inside an interactive browser viewport.
